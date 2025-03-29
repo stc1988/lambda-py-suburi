@@ -5,31 +5,41 @@ from aws_lambda_powertools import Logger, Tracer, Metrics
 from aws_lambda_powertools.metrics import MetricUnit
 from pydantic import BaseModel, Field, ValidationError, constr, conint
 from typing import Optional
-from common.logger import logger
+from common.logger import logger, init_logger_from_api_event
+from common.exception_handlers import register_exception_handlers
 
 app = APIGatewayRestResolver()
+register_exception_handlers(app)
 tracer = Tracer()
 metrics = Metrics(namespace="Powertools")
 
+class RequestPathParams(BaseModel):
+   userid: constr(min_length=1, max_length=10, pattern="^[a-zA-Z0-9]+$")
 
-# ✅ Pydanticモデルでバリデーション定義
-class UserRequest(BaseModel):
+
+class RequestHeader(BaseModel):
+   x_transaction_id: constr(min_length=10) = Field(..., alias="x-transaction-id")
+
+class RequestBody(BaseModel):
     name: constr(min_length=1, max_length=10)
-    age: conint(strict=True)  # 厳密に数値
+    age: conint(strict=True)
     birthday: Optional[constr(min_length=8, max_length=8)] = None
-
-
-
 
 @app.post("/user/<userid>")
 @tracer.capture_method
 def post_user(userid: str):
-    body = app.current_event.json_body
-    transaction_id = app.current_event.headers.get("x-transaction-id")
-    logger.append_keys(transaction_id=transaction_id)
+    init_logger_from_api_event(app.current_event.headers)
+    
+    # validate path paramter
+    validated_path = RequestPathParams(userid=userid)
+    
+    # validate header
+    headers = app.current_event.headers
+    user_headers = RequestHeader(**headers)
 
-    # ✅ 例外は共通ハンドラーで処理される
-    user_request = UserRequest(**body)
+    # validate body
+    body = app.current_event.json_body
+    user_request = RequestBody(**body)
 
     logger.info("POST /user/<userid> called", extra={
         "userid": userid,
