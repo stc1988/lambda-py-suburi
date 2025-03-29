@@ -30,8 +30,8 @@ Resources:
         HelloPath:
           Type: Api
           Properties:
-            Path: /hello
-            Method: GET
+            Path: /user/{userid}
+            Method: POST
       Environment:
         Variables:
           POWERTOOLS_SERVICE_NAME: PowertoolsHelloWorld
