@@ -17,11 +17,22 @@ Globals:
   Api:
     TracingEnabled: true
 Resources:
+  CommonLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: CommonLayer
+      Description: Common utilities for Lambda functions
+      ContentUri: layer/Common
+      CompatibleRuntimes:
+        - python3.11
+      RetentionPolicy: Retain
   userFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.lambda_handler
       CodeUri: api/user
+      Layers:
+        - !Ref CommonLayer
       Description: user function
       Architectures:
       - x86_64
@@ -39,11 +50,7 @@ Resources:
           LOG_LEVEL: INFO
       Tags:
         LambdaPowertools: python
-# Outputs:
-#   HelloWorldApi:
-#     Description: API Gateway endpoint URL for Prod environment for Hello World Function
-#     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello"
-#   HelloWorldFunction:
-#     Description: Hello World Lambda Function ARN
-#     Value: !GetAtt HelloWorldFunction.Arn
-
+Outputs:
+  HelloWorldApi:
+    Description: API Gateway endpoint URL for Prod environment for Hello World Function
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
