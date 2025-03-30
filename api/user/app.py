@@ -18,8 +18,8 @@ def handle_request(userid: str):
     
     response = do_process(
         userid=userid,
-        headers=app.current_event.headers,
-        body=app.current_event.json_body
+        request_headers=app.current_event.headers,
+        request_body=app.current_event.json_body
     )
     return response
 

@@ -1,28 +1,35 @@
-from api_models import RequestPathParams, RequestHeaders, RequestBody
-from aws_lambda_powertools.logging import Logger
-from aws_lambda_powertools.metrics import Metrics, MetricUnit
+from typing import Optional
+from pydantic import BaseModel, Field, constr, conint
+from common.logger import logger
 
-logger = Logger()
-metrics = Metrics(namespace="Powertools")
+class RequestPathParams(BaseModel):
+   userid: constr(min_length=1, max_length=10, pattern="^[a-zA-Z0-9]+$")
 
-def do_process(userid: str, headers: dict, body: dict) -> dict:
-    # Validate path parameter
+class RequestHeaders(BaseModel):
+   x_transaction_id: constr(min_length=10) = Field(..., alias="x-transaction-id")
+
+class RequestBody(BaseModel):
+    name: constr(min_length=1, max_length=10)
+    age: conint(strict=True)
+    birthday: Optional[constr(min_length=8, max_length=8)] = None
+
+def validate_request(userid: str, request_headers: dict, request_body: dict):
     path_params = RequestPathParams(userid=userid)
+    headers = RequestHeaders(**request_headers)
+    body = RequestBody(**request_body)
 
-    # Validate headers
-    request_headers = RequestHeaders(**headers)
+    return path_params, headers, body
 
-    # Validate body
-    request_body = RequestBody(**body)
-
+def do_process(userid: str, request_headers: dict, request_body: dict) -> dict:
+    
+    path_params, headers, body = validate_request(userid, request_headers, request_body)
+ 
     logger.info("POST /user/<userid> called", extra={
         "userid": path_params.userid,
-        "request_body": request_body
+        "request_body": body
     })
-
-    metrics.add_metric(name="UserPostInvocations", unit=MetricUnit.Count, value=1)
 
     return {
         "message": f"User ID received: {path_params.userid}",
-        "validated_data": request_body.dict()
+        "validated_data": body.model_dump()
     }
