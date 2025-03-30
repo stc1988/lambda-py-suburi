@@ -1,4 +1,4 @@
-from api_models import RequestPathParams, RequestHeader, RequestBody
+from api_models import RequestPathParams, RequestHeaders, RequestBody
 from aws_lambda_powertools.logging import Logger
 from aws_lambda_powertools.metrics import Metrics, MetricUnit
 
@@ -10,7 +10,7 @@ def do_process(userid: str, headers: dict, body: dict) -> dict:
     path_params = RequestPathParams(userid=userid)
 
     # Validate headers
-    request_headers = RequestHeader(**headers)
+    request_headers = RequestHeaders(**headers)
 
     # Validate body
     request_body = RequestBody(**body)
