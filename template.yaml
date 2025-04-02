@@ -39,7 +39,7 @@ Resources:
       Tracing: Active
       Events:
         HelloPath:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /user/{userid}
             Method: POST
@@ -53,4 +53,4 @@ Resources:
 Outputs:
   HelloWorldApi:
     Description: API Gateway endpoint URL for Prod environment for Hello World Function
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"

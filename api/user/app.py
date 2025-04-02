@@ -1,12 +1,12 @@
 from aws_lambda_powertools import Tracer, Metrics
-from aws_lambda_powertools.event_handler import APIGatewayHttpResolver
+from aws_lambda_powertools.event_handler import APIGatewayRestResolver
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from aws_lambda_powertools.utilities.parser import parse
 from common.logger import init_logger_from_api_event
 from common.exception_handlers import register_exception_handlers
 from service import do_process
 
-app = APIGatewayHttpResolver()
+app = APIGatewayRestResolver()
 register_exception_handlers(app)
 tracer = Tracer()
 metrics = Metrics(namespace="Powertools")
