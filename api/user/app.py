@@ -4,11 +4,11 @@ from aws_lambda_powertools.utilities.typing import LambdaContext
 from aws_lambda_powertools.utilities.parser import parse
 from common.logger import init_logger_from_api_event
 from common.exception_handlers import register_exception_handlers
+from common.tracer import tracer
 from service import do_process
 
 app = APIGatewayRestResolver()
 register_exception_handlers(app)
-tracer = Tracer()
 metrics = Metrics(namespace="Powertools")
 
 @app.post("/user/<userid>")

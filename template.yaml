@@ -10,13 +10,80 @@ Globals:
     Timeout: 5
     MemorySize: 128
     Runtime: python3.12
-
     Tracing: Active
     LoggingConfig:
       LogFormat: JSON
   Api:
     TracingEnabled: true
+
 Resources:
+  # 🔐 KMS キー
+  LambdaEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for Lambda encryption/decryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowRootAccount
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: AllowAccountWideLambdaUse
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource: "*"
+
+  # 🔐 KMS エイリアス
+  LambdaEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/lambda-key
+      TargetKeyId: !Ref LambdaEncryptionKey
+
+  # 🧾 Lambda 実行ロール
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaKMSAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kms:Encrypt
+                  - kms:Decrypt
+                  - kms:GenerateDataKey
+                Resource: !GetAtt LambdaEncryptionKey.Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: "*"
+
+  # 📦 共通レイヤー（Powertoolsなど）
   CommonLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -26,30 +93,37 @@ Resources:
       CompatibleRuntimes:
         - python3.11
       RetentionPolicy: Retain
+
+  # 🧠 Lambda 関数
   userFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: userFunction
       Handler: app.lambda_handler
       CodeUri: api/user
       Layers:
         - !Ref CommonLayer
       Description: user function
       Architectures:
-      - x86_64
+        - x86_64
       Tracing: Active
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: userapi
+          POWERTOOLS_TRACER_CAPTURE_RESPONSE: false
+          POWERTOOLS_METRICS_NAMESPACE: Powertools
+          LOG_LEVEL: INFO
+          KMS_KEY_ID: !Ref LambdaEncryptionKeyAlias
       Events:
         HelloPath:
           Type: Api
           Properties:
             Path: /user/{userid}
             Method: POST
-      Environment:
-        Variables:
-          POWERTOOLS_SERVICE_NAME: userapi
-          POWERTOOLS_METRICS_NAMESPACE: Powertools
-          LOG_LEVEL: INFO
       Tags:
         LambdaPowertools: python
+
 Outputs:
   HelloWorldApi:
     Description: API Gateway endpoint URL for Prod environment for Hello World Function
